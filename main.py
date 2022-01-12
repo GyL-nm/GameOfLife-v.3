@@ -11,13 +11,13 @@ def Display():
     app.display()
 
 def TogglePixel(_grid, x,y, color):
-    grid.ToggleCell(_grid, x,y)
     if gameGridWfl[x,y].color == "black":
         gameGridWfl.set_pixel(x, y, color) 
     else:
         gameGridWfl.set_pixel(x, y, "black") 
 
 def GenerateGrid(_grid, height, width):
+    UItoGrid(_grid)
     grid.GenerateGrid(width,height)
     
     #resize grid
@@ -34,14 +34,12 @@ def GenerateGrid(_grid, height, width):
                 gameGridWfl[x,y].color = "black"
 
 def UItoGrid(_grid):
-    newGrid = []
     for y in range(gameGridWfl.height):
         for x in range(gameGridWfl.width):
             if gameGridWfl[x,y].color != "black":
-                newGrid.append(1)
+                _grid[y][x] == 1
             else:
-                newGrid.append(0)
-    _grid = newGrid
+                _grid[y][x] == 0
 
 def UpdateGrid(_grid, height, width):
     UItoGrid(_grid)
@@ -58,8 +56,8 @@ def UpdateGrid(_grid, height, width):
     #make sure grid is visible
     gameGridWfl.show()
     
-    for y in range(len(_grid)):
-        for x in range(len(_grid[0])):
+    for y in range(width):
+        for x in range(height):
             if gameGridWfl[x,y].color != "black":
                 cell = 1 #ALIVE
             else:
@@ -70,10 +68,10 @@ def UpdateGrid(_grid, height, width):
                 TogglePixel(_grid, x,y, CellColor(x,y))
 
 def GenerateGridCall():
-    UpdateGrid(mainGrid, ySld.value, xSld.value)
+    GenerateGrid(mainGrid, xSld.value, ySld.value)
     
 def UpdateGridCall():
-    UpdateGrid(mainGrid, ySld.value, xSld.value)
+    UpdateGrid(mainGrid, gameGridWfl.height, gameGridWfl.width)
     
 def LoadSeed():
     pass
@@ -139,7 +137,14 @@ def GuidePopup():
 
 def ColorPopup():
     colorWn.show()
-    
+
+if test:
+    testGrid = grid.GenerateGrid(10,10)
+    grid.Print2dArray(testGrid)
+    grid.RandomiseGrid(testGrid)
+    grid.Print2dArray(testGrid)
+    UpdateGrid(testGrid)
+
 ### MAIN WINDOW ###
 app = App(title="Conway's Game of Life - Generation 0")
 menuBar = MenuBar(app,
@@ -201,7 +206,6 @@ PButtonBox = Box(parameterBox, layout="grid")
 
 generatePB = PushButton(PButtonBox, grid=[0,0], width=15, text="Generate Grid", command=GenerateGridCall)
 
-
 advancePB = PushButton(parameterBox, grid=[0,1],width=34, text="Advance Generation", command=UpdateGridCall)
 
 ### COLOUR PICKER ###
@@ -258,6 +262,5 @@ tutorialWn = Window(app,
 Display()
 
 
-if test:
-    testGrid = grid.GenerateGrid(10,10)
-    grid.Print2dArray(testGrid)
+
+    
