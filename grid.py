@@ -16,12 +16,6 @@ def ToggleCell(grid, x,y):
     else:
         grid[y][x] = 0
 
-# check if cell is ALIVE
-def IsAlive(grid, x,y):   
-    if grid[y][x] == 1:
-        return True 
-    return False
-
     ### Grid functions ###
 # generate a blank grid with given dimensions
 def GenerateGrid(x,y):
@@ -32,7 +26,6 @@ def GenerateGrid(x,y):
     _grid = []  #temp grid
     for _y in range(y):
         _gridX = [] #temp grid row
-        
         for _x in range(x):
             _gridX.append(0)
         _grid.append(_gridX) #assemble grid by appending rows
@@ -50,57 +43,54 @@ def RandomiseGrid(grid):
     grid = _grid
 
 def NeighbourCheck(grid, x,y):
-    print(grid[y][x])
-    alive = IsAlive(grid, x,y)
+    #print(grid[y][x])
+    isAlive = grid[y][x]
     neighbourCount = 0
-    print(f"\nCELL ({x},{y})")
-    print(f"({x},{y}) alive = {alive}")
+    #print(f"\nCELL ({x},{y})")
+    #print(f"({x},{y}) alive = {isAlive}")
     for yOffset in range(-1,2):
         for xOffset in range(-1,2):
             _y = y+yOffset
             _x = x+xOffset
             if _y < 0 or _x < 0:
-                print(f"({_x},{_y}) ignored")
+                #print(f"({_x},{_y}) ignored")
                 continue
             
             try:
-                if IsAlive(grid, _x,_y):
+                isNeighbourAlive = grid[_y][_x]
+                if isNeighbourAlive:
                     neighbourCount += 1
-                    print(f"({x},{y}) neighbour ({_x},{_y}) ALIVE")
+                    #print(f"({x},{y}) neighbour ({_x},{_y}) ALIVE")
                     continue
-                print(f"({x},{y}) neighbour ({_x},{_y}) DEAD")
+                #print(f"({x},{y}) neighbour ({_x},{_y}) DEAD")
             except IndexError:
                 continue
             
-    if alive:
+    if isAlive:
         neighbourCount -= 1
         if neighbourCount == 2 or neighbourCount == 3:
-            print(f"ALIVE cell ({x},{y}) ALIVE with {neighbourCount} neighbours")
+            #print(f"ALIVE cell ({x},{y}) ALIVE with {neighbourCount} neighbours")
             return 1 #ALIVE
-        print(f"ALIVE cell ({x},{y}) DEAD with {neighbourCount} neighbours")
+        #print(f"ALIVE cell ({x},{y}) DEAD with {neighbourCount} neighbours")
         return 0 #DEAD
     else:
         if neighbourCount == 3:
-            print(f"DEAD cell ({x},{y}) ALIVE with {neighbourCount} neighbours")
+            #print(f"DEAD cell ({x},{y}) ALIVE with {neighbourCount} neighbours")
             return 1 #ALIVE
-        print(f"DEAD cell ({x},{y}) DEAD with {neighbourCount} neighbours")
+        #print(f"DEAD cell ({x},{y}) DEAD with {neighbourCount} neighbours")
         return 0 #DEAD
-        
 
 def UpdateGrid(grid):
-    Print2dArray(grid)
-    _grid = grid #temp grid
-    _newGrid = grid
-    for y in range(len(_grid)):
-        for x in range(len(_grid[0])):
-            oldCell = _grid[y][x]
+    cellsToToggle = []
+    for y in range(len(grid)):
+        for x in range(len(grid[0])):
             newCell = NeighbourCheck(grid, x,y)
-            if newCell != oldCell:
-                _newGrid[y][x] = newCell
-    
-    grid = _newGrid
-    Print2dArray(grid)
-            
+            if newCell != grid[y][x]:
+                cellsToToggle.append((x,y))
+
+    for cell in cellsToToggle:
+        ToggleCell(grid, cell[0],cell[1])
+
             
             
 
@@ -129,12 +119,15 @@ def Print2dArray(grid):
 if __name__ == "__main__":
     #yInp = int(input("grid width >> "))
     #xInp = int(input("grid height >> "))
-    
-    testGrid2 = GenerateGrid(5, 5)
-    RandomiseGrid(testGrid2)
-    Print2dArray(testGrid2)
+
+    testGrid = [   [0,0,0,0,0],
+                    [0,0,1,0,0],
+                    [0,1,1,1,0],
+                    [0,0,1,0,0],
+                    [0,0,0,0,0] ]
+    Print2dArray(testGrid)
     for i in range(2):
-        UpdateGrid(testGrid2)
-        Print2dArray(testGrid2)
+        UpdateGrid(testGrid)
+        Print2dArray(testGrid)
 else:
     print("*** grid module successfully loaded ***")
