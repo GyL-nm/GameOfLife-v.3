@@ -1,3 +1,4 @@
+import tkinter
 from guizero import App, Window, Box, Text, PushButton, TextBox, Slider, Waffle, MenuBar, Combo, CheckBox
 from pathlib import Path
 import math
@@ -8,7 +9,7 @@ import grid
 test = False 
 mainGrid = grid.GenerateGrid(25,25)
 
-def Display():
+def display():
     app.display()
 
 def TogglePixel(uiGrid, x,y, color):
@@ -263,6 +264,7 @@ def Lowlight(eventData):
 app = App(title="Conway's Game of Life - Generation 0")
 app.bg = "light gray"
 app.font = "helvetica"
+
 menuBar = MenuBar(app,
                 toplevel=["File", "Pattern", "Colour"], 
                 options=[
@@ -399,20 +401,23 @@ optionsRandomPageBox = Box(optionsWn,
 optionsRandomPageBox.bg = "light gray"
 optionsRandomPageBox.set_border(5,(150,150,150))
 
-optionsRandomPageColumn1T = Text(optionsRandomPageBox,
+optionsRandomPageColumn0T = Text(optionsRandomPageBox,
                                  grid=[0,1],
                                  text="Option",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=7)
 
-optionsRandomPageColumn2T = Text(optionsRandomPageBox,
+optionsRandomPageColumn0T = Text(optionsRandomPageBox,
                                  grid=[2,1],
                                  text="Description",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=7)
 
 optionsRandomPageOption1T = Text(optionsRandomPageBox,
                                  grid=[0,2],
                                  text="Random Chance",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=8)
 
 optionsRandomPageOption1Sld = Slider(optionsRandomPageBox,
                                  grid=[1,2],
@@ -424,7 +429,8 @@ optionsRandomPageOption1Sld.value = 3
 optionsRandomPageDesc1T = Text(optionsRandomPageBox,
                                  grid=[2,2],
                                  text="The chance that a cell will spawn as ALIVE when the grid is randomised",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=8)
 
 
 optionsPages = [optionsRandomPageBox]
@@ -504,7 +510,7 @@ if test:
     grid.Print2dArray(testGrid)
     UpdateGrid(testGrid)
 
-Display()
+display()
 
 
 
