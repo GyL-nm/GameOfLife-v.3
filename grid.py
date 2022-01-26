@@ -136,7 +136,6 @@ def RandomiseGrid(grid, chance):
         
     grid = _grid
 
-
 def Print2dArray(grid):
     """Prints a 2d Array in a readable format, with a coordinate axis border (FOR TESTING PURPOSES)
     
@@ -162,7 +161,7 @@ def TestPrint(str):
     if __name__ == "__main__":
         print(str)
 
-# for testing
+# testing 
 if __name__ == "__main__":
     
     while True:
@@ -172,7 +171,8 @@ if __name__ == "__main__":
 [3] Update Grid
 [4] Toggle Cells
 [5] Print Grid
-[6] QUIT
+[6] Print Grid Array
+[7] QUIT
 >> """)
         
         if option == "1":
@@ -206,9 +206,17 @@ if __name__ == "__main__":
             while True:
                 try:
                     loop = int(input("Number of updates >> "))
+                    pause = input("Pause between update (Y/N) >> ")
+                    if pause.lower() == "y":
+                        pause = True
+                    elif pause.lower() == "n":
+                        pause = False
+                    else:
+                        raise TypeError
+                    
                     break
                 except TypeError:
-                    print("Must be a whole number")    
+                    print("Invalid option")
                      
             if grid == None:
                 print("Grid must be created first, try Generate Grid")
@@ -217,7 +225,9 @@ if __name__ == "__main__":
             for i in range(loop):
                 UpdateGrid(grid)
                 Print2dArray(grid)
-                input(f"LOOP{i+1} COMPLETE\nPAUSE")
+                print(f"LOOP{i+1} COMPLETE")
+                if pause:
+                    input("PAUSE")
         
         elif option == "4":
             quit = ""
@@ -249,8 +259,16 @@ if __name__ == "__main__":
                 continue
             
             Print2dArray(grid)
-        
+
         elif option == "6":
+            
+            if grid == None:
+                print("Grid must be created first, try Generate Grid")
+                continue
+            
+            print(grid)
+        
+        elif option == "7":
             break
         
         else:

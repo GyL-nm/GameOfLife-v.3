@@ -1,3 +1,4 @@
+import tkinter
 from guizero import App, Window, Box, Text, PushButton, TextBox, Slider, Waffle, MenuBar, Combo, CheckBox
 from pathlib import Path
 import math
@@ -8,7 +9,7 @@ import grid
 test = False 
 mainGrid = grid.GenerateGrid(25,25)
 
-def Display():
+def display():
     app.display()
 
 def TogglePixel(uiGrid, x,y, color):
@@ -81,6 +82,33 @@ def GenerateGrid(_grid, uiGrid, height, width):
             if uiGrid[x,y].color != "black": #If cell !DEAD
                 uiGrid[x,y].color = "black" #Set ALIVE cell to DEAD
 
+def SetGrid(_grid, newGrid, uiGrid, height, width):
+    """Generates an new grid with a given arrangement
+    
+    _grid - main program grid
+    
+    newGrid - new grid arrangement to be grafted onto _grid
+    
+    uiGrid - UI grid object
+    
+    height - horizontal size
+    
+    height - vertical size"""
+    ResizeGrid(uiGrid, height, width) #Make sure grid dimensions are consistent between the UI and main program grid
+    
+    _grid = newGrid
+    
+    for y in range(height):
+        for x in range(width):
+            if uiGrid[x,y].color != "black": #If cell !DEAD
+                cell = 1 #flag as ALIVE
+            else:
+                cell = 0 #flag as DEAD
+
+            #only update if the new cell state for next generation is different from the current generation (for optimisation purposes)
+            if cell != _grid[y][x]:
+                TogglePixel(uiGrid, x,y, CellColor(x,y)) #Toggle cell
+
 def UpdateGrid(_grid, uiGrid, height, width):
     """Updates the grid to the next generation
     
@@ -136,10 +164,70 @@ def RandomiseGrid(_grid, uiGrid, height, width, chance):
                 TogglePixel(uiGrid, x,y, CellColor(x,y)) #Toggle cell
     
 def LoadSeed():
-    pass
+    folderPath = str(Path(__file__).parent.absolute()) + "/seeds"
+    
+    try:
+        filePath = app.select_file(folder=folderPath, filetypes=[ ["Hex seed", ".seed"] ])
+    except FileNotFoundError:
+        app.error("No file found", "No file was found.")
+        return
+    
+    if filePath.rstrip() == "":
+        app.error("No file found", "No file was found.")
+        return
+        
+    with open(filePath,"r") as file:
+        seed = file.read()
+    seedH = seed[:-6]
+        
+    dim = seed[-6:]
+    dimX = int(dim[3:])
+    dimY = int(dim[:3])
+    
+    seedBLength = dimX*dimY
+    seedB = (bin(int(seedH, 16))[2:]).zfill(seedBLength)
+    
+    loadGrid = []
+    for y in range(dimY):
+        loadGridX = []
+        for x in range(dimX):
+            loadGridX.append(int(seedB[(y*dimX)+x]))
+        loadGrid.append(loadGridX)
+        print(loadGridX)
+    
+    SetGrid(mainGrid, loadGrid, gameGridWfl, dimY,dimX)
+    
 
 def SaveSeed():
-    pass
+    global mainGrid
+    mainGrid = UItoGrid(mainGrid, gameGridWfl)
+    
+    folderPath = str(Path(__file__).parent.absolute()) + "/seeds"
+    
+    try:
+        filePath = app.select_file(save=True, folder=folderPath, filetypes=[ ["Hex seed", ".seed"] ]) + ".seed"
+    except FileNotFoundError:
+        app.error("Invalid filepath", "A valid filepath must be selected to save a file.")
+        return
+    
+    if filePath.rstrip() == ".seed":
+        app.error("Invalid filepath", "A valid filepath must be selected to save a file.")
+        return
+    
+    
+    seedB = ""
+    for row in mainGrid:
+        for cell in row:
+            seedB += str(cell)
+    
+    seedH = hex(int(seedB, 2))
+    dimStr = str(len(mainGrid)).zfill(3) + str(len(mainGrid[0])).zfill(3)
+    
+    seed = seedH + dimStr
+    
+    with open(filePath,"x") as file:
+        file.write(seed)
+        
 
 def LoadPattern():
     pass
@@ -196,7 +284,7 @@ def ColorMode1():
     global colorMode
     colorMode = 1
     ColorPopup()
-    CustomColor(gameGridWfl) #Update UI grid colours in realtime
+    CustomColor() #Update UI grid colours in realtime
 
 def ColorMode2():
     """Set colorMode to 0 (XY Gradient)"""
@@ -263,6 +351,7 @@ def Lowlight(eventData):
 app = App(title="Conway's Game of Life - Generation 0")
 app.bg = "light gray"
 app.font = "helvetica"
+
 menuBar = MenuBar(app,
                 toplevel=["File", "Pattern", "Colour"], 
                 options=[
@@ -399,20 +488,23 @@ optionsRandomPageBox = Box(optionsWn,
 optionsRandomPageBox.bg = "light gray"
 optionsRandomPageBox.set_border(5,(150,150,150))
 
-optionsRandomPageColumn1T = Text(optionsRandomPageBox,
+optionsRandomPageColumn0T = Text(optionsRandomPageBox,
                                  grid=[0,1],
                                  text="Option",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=7)
 
-optionsRandomPageColumn2T = Text(optionsRandomPageBox,
+optionsRandomPageColumn0T = Text(optionsRandomPageBox,
                                  grid=[2,1],
                                  text="Description",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=7)
 
 optionsRandomPageOption1T = Text(optionsRandomPageBox,
                                  grid=[0,2],
                                  text="Random Chance",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=8)
 
 optionsRandomPageOption1Sld = Slider(optionsRandomPageBox,
                                  grid=[1,2],
@@ -424,7 +516,8 @@ optionsRandomPageOption1Sld.value = 3
 optionsRandomPageDesc1T = Text(optionsRandomPageBox,
                                  grid=[2,2],
                                  text="The chance that a cell will spawn as ALIVE when the grid is randomised",
-                                 font="helvetica")
+                                 font="helvetica",
+                                 size=8)
 
 
 optionsPages = [optionsRandomPageBox]
@@ -504,7 +597,7 @@ if test:
     grid.Print2dArray(testGrid)
     UpdateGrid(testGrid)
 
-Display()
+display()
 
 
 
