@@ -1,5 +1,6 @@
     ### IMPORTS ###
 import random as rdm
+import multiprocessing
 
     ### Cell functions ###
 # cell is set DEAD
@@ -109,6 +110,29 @@ def UpdateGrid(grid):
     grid - main program grid"""
     #only update if the new cell state for next generation is different from the current generation (for optimisation purposes)
     cellsToToggle = [] #list of cells that need to be changed
+    flatGrid = []
+    for y in range(len(grid)):
+        for x in range(len(grid[0])):
+            flatGrid.append((grid[y][x],x,y))
+    
+    
+    processBlockCount = 0
+    processList = []
+    for cell in flatGrid:
+        if processBlockCount < 4:
+            p = multiprocessing.Process(target=NeighbourCheck, args=[grid, cell[1],cell[2]])
+            processList.append(p)
+            processBlockCount += 1
+        else:
+            for process in processList:
+                process.start()
+                
+            for process in processList:
+                process.join()
+            
+            processBlockCount = 0
+            processList = []
+    
     for y in range(len(grid)):
         for x in range(len(grid[0])):
             newCell = NeighbourCheck(grid, x,y) #evaluate neighbours of cell to get state next generation
@@ -162,7 +186,7 @@ def TestPrint(str):
     if __name__ == "__main__":
         print(str)
 
-# for testing
+# testing 
 if __name__ == "__main__":
     
     while True:
@@ -206,9 +230,17 @@ if __name__ == "__main__":
             while True:
                 try:
                     loop = int(input("Number of updates >> "))
+                    pause = input("Pause between update (Y/N) >> ")
+                    if pause.lower() == "y":
+                        pause = True
+                    elif pause.lower() == "n":
+                        pause = False
+                    else:
+                        raise TypeError
+                    
                     break
                 except TypeError:
-                    print("Must be a whole number")    
+                    print("Invalid option")
                      
             if grid == None:
                 print("Grid must be created first, try Generate Grid")
@@ -217,7 +249,9 @@ if __name__ == "__main__":
             for i in range(loop):
                 UpdateGrid(grid)
                 Print2dArray(grid)
-                input(f"LOOP{i+1} COMPLETE\nPAUSE")
+                print(f"LOOP{i+1} COMPLETE")
+                if pause:
+                    input("PAUSE")
         
         elif option == "4":
             quit = ""
