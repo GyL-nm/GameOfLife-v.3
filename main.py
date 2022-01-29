@@ -1,11 +1,14 @@
 import tkinter
+from xml.etree.ElementTree import TreeBuilder
 from guizero import App, Window, Box, Text, PushButton, TextBox, Slider, Waffle, MenuBar, Combo, CheckBox
 from pathlib import Path
 import math
 import random as rdm
+from collections import namedtuple
 
 import grid
 
+Cell = namedtuple("Cell", "x y")
 test = False 
 mainGrid = grid.GenerateGrid(25,25)
 
@@ -162,6 +165,68 @@ def RandomiseGrid(_grid, uiGrid, height, width, chance):
             #only update if the new cell state for next generation is different from the current generation (for optimisation purposes)
             if cell != _grid[y][x]:
                 TogglePixel(uiGrid, x,y, CellColor(x,y)) #Toggle cell
+
+def CreatePatternAuto(_grid):
+    # combine to make a bounding box around pattern
+    x1 = len(grid[0]) # x of pixel closest to the y axis
+    x2 = 0 # x of pixel furthest from the y axis
+    y1 = None # y of first ALIVE pixel
+    y2  = None # y of last ALIVE pixel
+    
+    #loop over all grid pixels
+    for y in range(len(_grid)):
+        for x in range(len(_grid[0])):
+            #if pixel is ALIVE
+            if _grid[y][x] == 1:
+                #hold as last pixel
+                y2 = y
+                #check for first ALIVE pixel
+                if y1 == None:
+                    y1 = y
+
+                #check if current pixel is closer to y axis than the current closest (left-most pixel)
+                if x < x1:
+                    x1 = x
+                #check if current pixel is further from the y axis than the current furthest (right-most pixel)
+                elif x > x2:
+                    x2 = x
+        
+    coords = [x1,y1,x2,y2]
+    if None in coords:
+        #error message
+        app.error("Invalid pattern", "There is no pattern to create as the canvas is blank.")
+        return False
+    
+    pattern = []
+    #create mini-grid of pixels from bounding box data
+    for y in range(y1, y2+1):
+        patternY = []
+        for x in range(x1, x2+1):
+            patternY.append(_grid[y][x])
+        pattern.append(patternY)
+    
+    return pattern
+
+clipboard = []
+def CreatePatternManual(_grid, x1,y1, x2,y2):
+    global clipboard
+    
+    coords = [x1,y1,x2,y2]
+    if None in coords:
+        #error message
+        app.error("Invalid pattern", "The bounding box was not placed properly.")
+        return False
+
+    pattern = []
+    for y in range(y1, y2+1):
+        patternY = []
+        for x in range(x1, x2+1):
+            patternY.append(_grid[y][x])
+        pattern.append(patternY)
+    
+    return pattern
+    
+    
     
 def LoadSeed():
     folderPath = str(Path(__file__).parent.absolute()) + "/seeds"
@@ -293,8 +358,43 @@ def ColorMode2():
     RecolorGrid(gameGridWfl) #Update UI grid colours in realtime
 
 def WaffleClick(x,y):
-    """Toggle cells when clicked on the UI grid"""
-    TogglePixel(gameGridWfl, x,y, CellColor(x,y))
+    if not clipboardKey:
+        """Toggle cells when clicked on the UI grid"""
+        TogglePixel(gameGridWfl, x,y, CellColor(x,y))
+
+    else:
+        BoundingBox(x,y)
+
+patternKey = False
+def PatternKey(eventData):
+    global patternKey
+    
+    if patternKey == False:
+        patternKey = True
+        clipboardKey = False
+        return
+    patternKey = False
+    
+clipboardKey = False
+def ClipboardKey(eventData):
+    global clipboardKey
+    
+    if clipboardKey == False:
+        clipboardKey = True
+        patternKey = False
+        return
+    clipboardKey = False
+    
+
+click1 = None
+click2 = None
+def BoundingBox(x,y):
+    global click1,click2
+    if click2 == None:
+        click2 = (x,y)
+    else:
+        click1 = (x,y)
+        click2 = None
 
 def GenerateGridCall():
     """Call GenerateGrid when generatePB button is pressed"""
@@ -436,7 +536,7 @@ randomisePB = PushButton(PButtonBox,
                         text="Randomise Grid", 
                         command=RandomiseGridCall)
 
-advancePB = PushButton(parameterBox, grid=[0,2],
+advancePB = PushButton(parameterBox,
                        width=34,
                        height=2,
                        text="Advance Generation", 
