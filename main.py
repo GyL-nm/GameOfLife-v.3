@@ -1,14 +1,8 @@
-import tkinter
-from xml.etree.ElementTree import TreeBuilder
 from guizero import App, Window, Box, Text, PushButton, TextBox, Slider, Waffle, MenuBar, Combo, CheckBox
 from pathlib import Path
-import math
-import random as rdm
-from collections import namedtuple
 
 import grid
 
-Cell = namedtuple("Cell", "x y")
 test = False 
 mainGrid = grid.GenerateGrid(25,25)
 
@@ -74,6 +68,7 @@ def GenerateGrid(_grid, uiGrid, height, width):
     height - horizontal size
     
     height - vertical size"""
+    
     ResizeGrid(uiGrid, height, width) #Make sure grid dimensions are consistent between the UI and main program grid
     
     _grid = UItoGrid(_grid, uiGrid) #Convert UI grid into 2D array
@@ -84,6 +79,10 @@ def GenerateGrid(_grid, uiGrid, height, width):
             #only update if the new cell state for next generation is different from the current generation (for optimisation purposes)
             if uiGrid[x,y].color != "black": #If cell !DEAD
                 uiGrid[x,y].color = "black" #Set ALIVE cell to DEAD
+                
+    global genCount
+    genCount = 0
+    app.title = "Conway's Game of Life - Generation 0"
 
 def SetGrid(_grid, newGrid, uiGrid, height, width):
     """Generates an new grid with a given arrangement
@@ -111,6 +110,10 @@ def SetGrid(_grid, newGrid, uiGrid, height, width):
             #only update if the new cell state for next generation is different from the current generation (for optimisation purposes)
             if cell != _grid[y][x]:
                 TogglePixel(uiGrid, x,y, CellColor(x,y)) #Toggle cell
+    
+    global genCount
+    genCount = 0
+    app.title = "Conway's Game of Life - Generation 0"
 
 def UpdateGrid(_grid, uiGrid, height, width):
     """Updates the grid to the next generation
@@ -137,6 +140,11 @@ def UpdateGrid(_grid, uiGrid, height, width):
             #only update if the new cell state for next generation is different from the current generation (for optimisation purposes)
             if cell != _grid[y][x]:
                 TogglePixel(uiGrid, x,y, CellColor(x,y)) #Toggle cell
+    
+    global genCount
+    
+    genCount += 1
+    app.title = f"Conway's Game of Life - Generation {genCount}"
 
 def RandomiseGrid(_grid, uiGrid, height, width, chance):
     """Generates a grid with a random spread of DEAD and ALIVE cells
@@ -165,10 +173,14 @@ def RandomiseGrid(_grid, uiGrid, height, width, chance):
             #only update if the new cell state for next generation is different from the current generation (for optimisation purposes)
             if cell != _grid[y][x]:
                 TogglePixel(uiGrid, x,y, CellColor(x,y)) #Toggle cell
+    
+    global genCount
+    genCount = 0
+    app.title = "Conway's Game of Life - Generation 0"
 
 def CreatePatternAuto(_grid):
     # combine to make a bounding box around pattern
-    x1 = len(grid[0]) # x of pixel closest to the y axis
+    x1 = len(_grid[0]) # x of pixel closest to the y axis
     x2 = 0 # x of pixel furthest from the y axis
     y1 = None # y of first ALIVE pixel
     y2  = None # y of last ALIVE pixel
@@ -223,82 +235,173 @@ def CreatePatternManual(_grid, x1,y1, x2,y2):
         for x in range(x1, x2+1):
             patternY.append(_grid[y][x])
         pattern.append(patternY)
-    
+        
+    clipboard.append(pattern)
     return pattern
-    
-    
-    
-def LoadSeed():
-    folderPath = str(Path(__file__).parent.absolute()) + "/seeds"
+
+def LoadSeed(_grid, uiGrid):
+    folderPath = str(Path(__file__).parent.absolute()) + "/seeds" # get path to "seeds" subfolder
     
     try:
-        filePath = app.select_file(folder=folderPath, filetypes=[ ["Hex seed", ".seed"] ])
+        filepath = app.select_file(folder=folderPath, filetypes=[ ["Hex Seed (*.seed)", ".seed"] ]) # windows dialogue popup for accessing files
     except FileNotFoundError:
-        app.error("No file found", "No file was found.")
-        return
-    
-    if filePath.rstrip() == "":
-        app.error("No file found", "No file was found.")
+        app.error("No file found", "No file was found.") # error popup when no file is selected
         return
         
-    with open(filePath,"r") as file:
-        seed = file.read()
-    seedH = seed[:-6]
+    with open(filepath,"r") as file:
+        seed = file.read() # read seed data from .seed file (last 6 characters are the dimensions needed to add leading zeros to the binary seed e.g "01A5E0|020012")
+    seedH = seed[:-6] # take hex data for seed
         
-    dim = seed[-6:]
-    dimX = int(dim[3:])
+    dim = seed[-6:] # take last 6 characters for grid dimensions
+    dimX = int(dim[3:]) # split dimensions into x and y
     dimY = int(dim[:3])
     
-    seedBLength = dimX*dimY
-    seedB = (bin(int(seedH, 16))[2:]).zfill(seedBLength)
+    seedBLength = dimX*dimY # get length of flattened 2D array
+    seedB = (bin(int(seedH, 16))[2:]).zfill(seedBLength) # add leading zeros to the binary seed
     
     loadGrid = []
-    for y in range(dimY):
+    for y in range(dimY): # reformat the flattened list into a 2D array using dimensions data
         loadGridX = []
         for x in range(dimX):
             loadGridX.append(int(seedB[(y*dimX)+x]))
         loadGrid.append(loadGridX)
         print(loadGridX)
     
-    SetGrid(mainGrid, loadGrid, gameGridWfl, dimY,dimX)
+    SetGrid(_grid, loadGrid, uiGrid, dimY,dimX) # parse loaded grid onto mainGrid
     
-
-def SaveSeed():
-    global mainGrid
-    mainGrid = UItoGrid(mainGrid, gameGridWfl)
-    
-    folderPath = str(Path(__file__).parent.absolute()) + "/seeds"
+def SaveSeed(_grid, uiGrid):
+    folderPath = str(Path(__file__).parent.absolute()) + "/seeds" # get path to "seeds" subfolder
     
     try:
-        filePath = app.select_file(save=True, folder=folderPath, filetypes=[ ["Hex seed", ".seed"] ]) + ".seed"
+        filepath = app.select_file(save=True, folder=folderPath, filetypes=[ ["Hex Seeds (*.seed)", ".seed"] ]) + ".seed" # windows dialogue popup for saving files
     except FileNotFoundError:
-        app.error("Invalid filepath", "A valid filepath must be selected to save a file.")
+        app.error("Invalid filepath", "A valid filepath must be selected to save this file.") # error popup when no file is created
         return
     
-    if filePath.rstrip() == ".seed":
-        app.error("Invalid filepath", "A valid filepath must be selected to save a file.")
+    filename = (Path(filepath).name).replace(".seed","")
+    if filename.rstrip() == "":
+        app.error("Invalid filepath", "A valid filename must be entered to save this file.") # error popup when file has no name
         return
     
+    _grid = UItoGrid(_grid, uiGrid) # copy the current UI grid to the mainGrid for continuity
     
     seedB = ""
-    for row in mainGrid:
+    for row in _grid:
         for cell in row:
-            seedB += str(cell)
+            seedB += str(cell) # flatten 2D grid into list
     
-    seedH = hex(int(seedB, 2))
-    dimStr = str(len(mainGrid)).zfill(3) + str(len(mainGrid[0])).zfill(3)
+    seedH = hex(int(seedB, 2)) # convert binary seed into hex (removes leading zeros)
+    dimStr = str(len(mainGrid)).zfill(3) + str(len(mainGrid[0])).zfill(3) # create 6 character string to store the grid dimensions
     
-    seed = seedH + dimStr
+    seed = seedH + dimStr # add dimension data to end of the seed
     
-    with open(filePath,"x") as file:
-        file.write(seed)
+    with open(filepath,"x") as file:
+        file.write(seed) # write seed to file
+
+patternDict = {}
+def LoadPattern(_grid, uiGrid):
+    global patternDict
+    folderPath = str(Path(__file__).parent.absolute()) + "\patterns" # get path to "patterns" subfolder
+    
+    try:
+        filepath = app.select_file(folder=folderPath, filetypes=[ ["2D Patterns (*.pattern)", ".pattern"] ]) # windows dialogue popup for accessing files
+    except FileNotFoundError:
+        app.error("No file found", "No file was found.") # error popup when no file is found
+        return
+    
+    filename = (Path(filepath).name).replace(".pattern","") # remove file extension to get filename string
+    
+    
+    if filename.rstrip() == "":
+        app.error("No file found", "No file was found.") # error popup when invalid filename is used
+        return
+    
+    with open(filepath,"r") as file:
+        try:
+            pattern = eval(file.read()) # convert string into 2D array
+        except SyntaxError:
+            app.error("Unrecognisable file", "The file could not be read or was formatted incorrectly.") # error popup when the array string is formatted incorrectly
+            return
+    
+    patternDict[filename] = pattern # add the pattern to the dictionary
+    
+    fileLines = [] 
+    for key in patternDict:
+            fileLines.append((str(key) + ";" + str(patternDict[key]) + "\n")) # new line for each pattern
+    fileLines[-1] = fileLines[-1].replace("\n","") # remove newline from last line to prevent empty pattern entries
+    
+    filepath = str(Path(__file__).parent.absolute()) + "\patterns.pdict" # get path to "patterns" subfolder
+    with open(filepath, "w") as file:
+        file.writelines(fileLines) # write patterns to file
+    
+    UpdatePatterns() # load contents of patterns.pdict to patternDict for consistency
+
+def SavePattern(_grid, uiGrid):
+    folderPath = str(Path(__file__).parent.absolute()) + "\patterns" # get path to "patterns" subfolder
+    
+    try:
+        filepath = app.select_file(save=True, folder=folderPath, filetypes=[ ["2D Patterns (*.pattern)", ".pattern"] ]) + ".pattern" # windows dialogue popup for saving files
+    except FileNotFoundError:
+        app.error("Invalid filepath", "A valid filepath must be selected to save this file.") # error popup when no file is created
+        return
+
+    filename = (Path(filepath).name).replace(".pattern","")
+    if filename.rstrip() == "":
+        app.error("Invalid filepath", "A valid filename must be entered to save this file.") # error popup when an invalid filename is used
+        return
+    
+    _grid = UItoGrid(_grid, uiGrid) # copy the current UI grid to the mainGrid for continuity
+    pattern = CreatePatternAuto(_grid) # automatically generate pattern that contains all alive cells in the smallest dimensions possible
+    
+    with open(filepath,"x") as file:
+        file.write(str(pattern)) # write pattern to file
+    
+    UpdatePatterns() # load contents of patterns.pdict to patternDict for consistency
+
+def UpdatePatterns():
+    global patternDict
+    path = str(Path(__file__).parent.absolute()) + "\patterns.pdict"
+    patternsCom.clear()
+    with open(path, "r") as f:
+        patterns = f.readlines()
+        print("save patterns :>" + str(patterns))
+        for i in range(len(patterns)):
+            patterns[i] = patterns[i].split(";")
+            print(patterns)
+
+        patternsCom.clear()
+        for pattern in patterns:
+            patternsCom.append(pattern[0])
+            patternDict[pattern[0]] = pattern[1]
+    
+def PlacePattern(x,y):
+    pattern = ""
+    try:
+        print(str(patternsCom.value))
+        print(patternDict[str(patternsCom.value)])
+        pattern = patternDict[str(patternsCom.value)]
+        print(pattern)
+    except KeyError:
+        app.error("Invalid Pattern", "No pattern has been selected. Try creating or importing a pattern.")
+        return False
         
+    if pattern == "":
+        app.error("Invalid Pattern", "No pattern has been selected. Try creating or importing a pattern.")
+        return False
+    _grid = UItoGrid(mainGrid, gameGridWfl)
 
-def LoadPattern():
-    pass
+    pattern = eval(str(pattern))
 
-def SavePattern():
-    pass
+    if len(pattern[0]) < len(_grid[0])-1 and len(pattern) < len(_grid)-1:
+        for _y in range(len(pattern)):
+            for _x in range(len(pattern[0])):
+                try:
+                    print(str(x+_x) + "," + str(y+_y))
+                    _grid[y+_y][x+_x] = pattern[_y][_x]
+                except IndexError:
+                    continue
+    
+    SetGrid(mainGrid, _grid, gameGridWfl, height=ySld.value, width=xSld.value)
 
 
 def RecolorGrid(uiGrid):
@@ -358,15 +461,17 @@ def ColorMode2():
     RecolorGrid(gameGridWfl) #Update UI grid colours in realtime
 
 def WaffleClick(x,y):
-    if not clipboardKey:
-        """Toggle cells when clicked on the UI grid"""
-        TogglePixel(gameGridWfl, x,y, CellColor(x,y))
-
-    else:
+    """Toggle cells when clicked on the UI grid"""
+    if clipboardKey:
         BoundingBox(x,y)
+    elif patternKey:
+        PlacePattern(x,y)
+    else:
+        TogglePixel(gameGridWfl, x,y, CellColor(x,y))
+        
 
 patternKey = False
-def PatternKey(eventData):
+def PatternKey():
     global patternKey
     
     if patternKey == False:
@@ -376,7 +481,7 @@ def PatternKey(eventData):
     patternKey = False
     
 clipboardKey = False
-def ClipboardKey(eventData):
+def ClipboardKey():
     global clipboardKey
     
     if clipboardKey == False:
@@ -384,29 +489,85 @@ def ClipboardKey(eventData):
         patternKey = False
         return
     clipboardKey = False
-    
 
-click1 = None
-click2 = None
+def Keybind(eventData):
+    if eventData.key == "p":
+        PatternKey()
+    elif eventData.key == "c":
+        ClipboardKey()
+
+boundingBoxXY1 = None
+boundingBoxXY2 = None
 def BoundingBox(x,y):
-    global click1,click2
-    if click2 == None:
-        click2 = (x,y)
+    global boundingBoxXY1,boundingBoxXY2
+    if boundingBoxXY2 == None:
+        boundingBoxXY2 = (x,y)
     else:
-        click1 = (x,y)
-        click2 = None
+        boundingBoxXY1 = (x,y)
+        boundingBoxXY2 = None
 
 def GenerateGridCall():
     """Call GenerateGrid when generatePB button is pressed"""
-    GenerateGrid(mainGrid, gameGridWfl, ySld.value, xSld.value)
+    global playSim
+    playSim = False
     
+    GenerateGrid(mainGrid, gameGridWfl, ySld.value, xSld.value)
+       
 def UpdateGridCall():
     """Call UpdateGrid when advancePB button is pressed"""
+    global playSim
+    playSim = False
+    
     UpdateGrid(mainGrid, gameGridWfl, gameGridWfl.height, gameGridWfl.width)
+
+playSim = False
+def RepeatUpdateGrid():
+    """Call UpdateGrid when playSim is enabled"""
+    global playSim, playSimDelay
+    if playSim:
+        UpdateGrid(mainGrid, gameGridWfl, gameGridWfl.height, gameGridWfl.width)
+    
+def PlaySimCall():
+    """Enable playSim when playSimPB button is pressed"""
+    global playSim
+    playSim = True
+    
+def StopSimCall():
+    """Disable playSim when stopSimPB button is pressed"""
+    global playSim
+    playSim = False
     
 def RandomiseGridCall():
     """Call RandomiseGrid when randomisePB button is pressed"""
+    global playSim
+    playSim = False
+    
     RandomiseGrid(mainGrid, gameGridWfl, gameGridWfl.height, gameGridWfl.width, optionsRandomPageOption1Sld.value)
+
+def SaveSeedCall():
+    """Call SaveSeed when "File>Save Seed" is pressed"""
+    SaveSeed(mainGrid, gameGridWfl)
+    
+def LoadSeedCall():
+    """Call LoadSeed when "File>Load Seed" is pressed"""
+    LoadSeed(mainGrid, gameGridWfl)
+
+def SavePatternCall():
+    """Call SavePattern when "Pattern>Export Pattern" is pressed"""
+    SavePattern(mainGrid, gameGridWfl)
+      
+def LoadPatternCall():
+    """Call LoadPattern when "Pattern>Import Pattern" is pressed"""
+    LoadPattern(mainGrid, gameGridWfl)
+    
+def PatternToolCall():
+    """Enable/Disable patternKey when patternsCB checkbox is pressed"""
+    global patternKey
+    PatternKey()
+    patternsCB.value = False
+    if patternKey:
+        patternsCB.value = True
+        
 
 def OptionsPopup():
     """Open optionsWn window when pressed in the MenuBar"""
@@ -436,27 +597,31 @@ def ColorPopup():
 #     tutorialWn.show()
 
 def Highlight(eventData):
-    """Highlight a button on any event
+    """Highlight a widget on any event
     
     eventData - data from the widget"""
     eventData.widget.bg = (220,220,220)
 
 def Lowlight(eventData):
-    """De-highlight a button on any event
+    """De-highlight a widget on any event
     
     eventData - data from the widget"""
     eventData.widget.bg = (255,255,255)
 
 ### MAIN WINDOW ###
+genCount = 0
 app = App(title="Conway's Game of Life - Generation 0")
 app.bg = "light gray"
 app.font = "helvetica"
+app.repeat(150, RepeatUpdateGrid)
+
+app.when_key_pressed = Keybind
 
 menuBar = MenuBar(app,
                 toplevel=["File", "Pattern", "Colour"], 
                 options=[
-                    [ ["Options", OptionsPopup], ["Load Seed", LoadSeed], ["Save Seed", SaveSeed] ], 
-                    [ ["Import Pattern", LoadPattern], ["Export Pattern", SavePattern] ],
+                    [ ["Options", OptionsPopup], ["Load Seed", LoadSeedCall], ["Save Seed", SaveSeedCall] ], 
+                    [ ["Import Pattern", LoadPatternCall], ["Export Pattern", SavePatternCall] ],
                     [ ["Black/White",ColorMode0],["Custom",ColorMode1],["XY Gradient",ColorMode2] ]
                 ])
 
@@ -522,25 +687,36 @@ PButtonBox = Box(parameterBox,
                  layout="grid")
 PButtonBox.bg = "gray"
 
-
 generatePB = PushButton(PButtonBox, 
                         grid=[0,0], 
-                        width=15,
+                        width=20,
                         height=2, 
                         text="Generate Grid", 
                         command=GenerateGridCall)
 randomisePB = PushButton(PButtonBox, 
                         grid=[1,0], 
-                        width=15,
+                        width=20,
                         height=2, 
                         text="Randomise Grid", 
                         command=RandomiseGridCall)
 
 advancePB = PushButton(parameterBox,
-                       width=34,
+                       width=44,
                        height=2,
                        text="Advance Generation", 
                        command=UpdateGridCall)
+
+playSimPB = PushButton(parameterBox, 
+                       align="left", 
+                       width=5,
+                       text="⏵", 
+                       command=PlaySimCall)
+
+stopSimPB = PushButton(parameterBox,
+                       align="left",
+                       width=5, 
+                       text="⏸", 
+                       command=StopSimCall)
 
 generatePB.bg = "white"
 generatePB.when_mouse_enters = Highlight
@@ -553,6 +729,45 @@ advancePB.when_mouse_leaves = Lowlight
 randomisePB.bg = "white"
 randomisePB.when_mouse_enters = Highlight
 randomisePB.when_mouse_leaves = Lowlight
+
+playSimPB.bg = "white"
+playSimPB.when_mouse_enters = Highlight
+playSimPB.when_mouse_leaves = Lowlight
+
+stopSimPB.bg = "white"
+stopSimPB.when_mouse_enters = Highlight
+stopSimPB.when_mouse_leaves = Lowlight
+
+        # Pattern Tool #
+patternsBox = Box(parameterBox, 
+                  layout="grid", 
+                  border=2, 
+                  width="fill",
+                  height=44)
+
+patternsBox.bg = "white"
+patternsBox.set_border(2,"light gray")
+patternsCBT = Text(patternsBox, 
+                   grid=[2,0], 
+                   text="Pattern Tool")
+
+patternsCB = CheckBox(patternsBox, 
+                      grid=[1,0], 
+                      command=PatternToolCall)
+
+patternsCom = Combo(patternsBox, 
+                    grid=[0,0], 
+                    options=[], 
+                    selected=0)
+
+patternsCB.bg = "white"
+patternsCB.when_mouse_enters = Highlight
+patternsCB.when_mouse_leaves = Lowlight
+
+patternsCom.bg = "white"
+patternsCom.when_mouse_enters = Highlight
+patternsCom.when_mouse_leaves = Lowlight
+UpdatePatterns()
 
 ### OPTIONS ###
 optionsWn = Window(app,
