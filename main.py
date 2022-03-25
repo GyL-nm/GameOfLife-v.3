@@ -1,4 +1,4 @@
-from guizero import App, Window, Box, Text, PushButton, TextBox, Slider, Waffle, MenuBar, Combo, CheckBox
+from guizero import App, Window, Box, Text, PushButton, TextBox, Slider, Waffle, MenuBar, Combo, CheckBox, Picture
 from pathlib import Path
 
 import grid
@@ -180,8 +180,8 @@ def RandomiseGrid(_grid, uiGrid, height, width, chance):
 
 def CreatePatternAuto(_grid):
     # combine to make a bounding box around pattern
-    x1 = len(_grid[0]) # x of pixel closest to the y axis
-    x2 = 0 # x of pixel furthest from the y axis
+    x1 = len(_grid[0]) # x of ALIVE pixel closest to the y axis
+    x2 = 0 # x of ALIVE pixel furthest from the y axis
     y1 = None # y of first ALIVE pixel
     y2  = None # y of last ALIVE pixel
     
@@ -190,15 +190,16 @@ def CreatePatternAuto(_grid):
         for x in range(len(_grid[0])):
             #if pixel is ALIVE
             if _grid[y][x] == 1:
-                #hold as last pixel
-                y2 = y
+                y2 = y #hold as last pixel
+                
                 #check for first ALIVE pixel
                 if y1 == None:
-                    y1 = y
+                    y1 = y 
 
                 #check if current pixel is closer to y axis than the current closest (left-most pixel)
                 if x < x1:
                     x1 = x
+                    
                 #check if current pixel is further from the y axis than the current furthest (right-most pixel)
                 elif x > x2:
                     x2 = x
@@ -210,7 +211,7 @@ def CreatePatternAuto(_grid):
         return False
     
     pattern = []
-    #create mini-grid of pixels from bounding box data
+    # create mini-grid of pixels from bounding box data
     for y in range(y1, y2+1):
         patternY = []
         for x in range(x1, x2+1):
@@ -219,6 +220,7 @@ def CreatePatternAuto(_grid):
     
     return pattern
 
+#***  vvv  WIP  vvv  ***#
 clipboard = []
 def CreatePatternManual(_grid, x1,y1, x2,y2):
     global clipboard
@@ -238,6 +240,7 @@ def CreatePatternManual(_grid, x1,y1, x2,y2):
         
     clipboard.append(pattern)
     return pattern
+#***  ^^^  WIP  ^^^  ***#
 
 def LoadSeed(_grid, uiGrid):
     folderPath = str(Path(__file__).parent.absolute()) + "/seeds" # get path to "seeds" subfolder
@@ -593,8 +596,11 @@ def ColorPopup():
     colorWn.show()
     colorWn.focus()
     
-# def TutorialPopup():
-#     tutorialWn.show()
+def TutorialPopup():
+    global tutorialPages, tutorialCurrentPage
+    tutorialWn.show()
+    tutorialCurrentPage = 0
+    tutorialPages[0].show()
 
 def Highlight(eventData):
     """Highlight a widget on any event
@@ -890,20 +896,141 @@ colorRSld.value = 255
 colorGSld.value = 255
 colorBSld.value = 255
 
+resources = folderPath = str(Path(__file__).parent.absolute()) + "/resources"
 ### TUTORIAL WINDOW ###
-# tutorialPB = PushButton(app,
-#                         text="Tutorial",
-#                         align="bottom",
-#                         width=15,
-#                         command=TutorialPopup)
-# tutorialPB.bg = "white"
-# tutorialPB.when_mouse_enters = Highlight
-# tutorialPB.when_mouse_leaves = Lowlight
+tutorialPB = PushButton(app,
+                        text="Tutorial",
+                        align="bottom",
+                        width=15,
+                        command=TutorialPopup)
+tutorialPB.bg = "white"
+tutorialPB.when_mouse_enters = Highlight
+tutorialPB.when_mouse_leaves = Lowlight
 
-# tutorialWn = Window(app, 
-#                     title="Tutorial", 
-#                     visible=False)
-# tutorialWn.font = "helvetica"
+tutorialWn = Window(app, 
+                    title="Tutorial", 
+                    visible=False,
+                    width=1500,
+                    height=850)
+tutorialWn.font = "helvetica"
+
+tutorialCurrentPage = 0
+def TutorialNext():
+    global tutorialPages, tutorialCurrentPage
+    try:
+        tutorialPages[tutorialCurrentPage].hide()
+        tutorialPages[tutorialCurrentPage+1].show()
+        tutorialCurrentPage += 1
+    except IndexError:
+        tutorialPages[tutorialCurrentPage].show()
+        return
+    
+def TutorialPrev():
+    global tutorialPages, tutorialCurrentPage
+    if tutorialCurrentPage - 1 < 0:
+        return
+    tutorialPages[tutorialCurrentPage].hide()
+    tutorialCurrentPage -= 1
+    tutorialPages[tutorialCurrentPage].show()
+
+tutorialNextPB = PushButton(tutorialWn,
+                        text=">",
+                        align="right",
+                        width=5,
+                        command=TutorialNext)
+
+tutorialPrevPB = PushButton(tutorialWn,
+                        text="<",
+                        align="left",
+                        width=5,
+                        command=TutorialPrev)
+
+    #Page 1#
+tutorialPage1Box = Box(tutorialWn,
+                       visible=False)
+
+tutorialPage1PtcBox = Box(tutorialPage1Box)
+tutorialPage1PtcBox.set_border(10,"gray")
+
+tutorialPage1Ptc = Picture(tutorialPage1PtcBox,
+                            image=resources+"/tutorial_pg1.gif")
+
+page1T = """Conway's Game of Life is an example of cellular automata, a system where we can simulate a real world things using simple rules, such as protein synthesis in Biology or fluid dynamics in Physics.
+These computational models give us a way to visualise complex interactions. The "cellular automata" means a collection of points, cells, that change automatically."""
+
+tutorialPage1T = Text(tutorialPage1Box,
+                      text=page1T,
+                      width=250)
+
+    #Page 2#
+tutorialPage2Box = Box(tutorialWn,
+                       visible=False)
+
+tutorialPage2PtcBox = Box(tutorialPage2Box)
+tutorialPage2PtcBox.set_border(10,"gray")
+
+tutorialPage2Ptc = Picture(tutorialPage2PtcBox,
+                            image=resources+"/tutorial_pg2.png")
+
+page2T = """Conway's Game of Life follows a very simple rule set.
+
+1.  A "Live" cell with 2 or 3 "Live" neighbours remain "Live".
+2.  A "Dead" cell with exactly 3 "Live" neighbours will become "Live"
+3.  Any other cell, "Live" or "Dead", will become/remain "Dead".
+
+These rules are enforced every tick, where the entire grid is evaluated together before any changes are made. Every cell is then updated altogether at once."""
+
+tutorialPage3T = Text(tutorialPage2Box,
+                      text=page2T,
+                      width=250)
+
+    #Page 3#
+tutorialPage3Box = Box(tutorialWn,
+                       visible=False)
+
+tutorialPage3PtcBox = Box(tutorialPage3Box)
+tutorialPage3PtcBox.set_border(10,"gray")
+
+tutorialPage3Ptc = Picture(tutorialPage3PtcBox,
+                            image=resources+"/tutorial_pg3.png")
+
+page3T = """While the rule-set is simple, interactions between different cells under this rule can for distinct shapes and machines that move as though they were a complete object. Here are a few examples of this.
+Different arrangements of cells can develop into complex machines with unique properties."""
+
+tutorialPage3T = Text(tutorialPage3Box,
+                      text=page3T,
+                      width=250)
+
+    #Page 4#
+tutorialPage4Box = Box(tutorialWn,
+                       visible=False)
+
+tutorialPage4PtcBox = Box(tutorialPage4Box)
+tutorialPage4PtcBox.set_border(10,"gray")
+
+tutorialPage4Ptc = Picture(tutorialPage4PtcBox,
+                            image=resources+"/tutorial_pg4.png")
+
+page4T = """Here is your toolkit.
+
+The "Generate Grid" button allows you to clear the grid, or confirm resizing the grid, which can be done via the vertical and horizontal sliders by the black grid.
+The "Randomise Grid" button creates a random spread of "Live" cells. The chance for a "Live" cell to spawn can be changed in the settings under File>Options>Random.
+The "Update Grid" button allows you to advance the simulation by 1 step, updating every cell on the grid.
+The Start and Stop buttons are similar to the "Update Grid" button, except they allow you to run the simulation continuously.
+The "Pattern Tool" checkbox and dropdown menu are a special tool that allow you to place premade or custom shapes onto the grid.
+
+The grid itself can be interacted with simply by clicking on it. You an toggle any cell on the grid.
+
+The topbar has some additional features that you may change at any time.
+The "File" menu contains the settings, as well as the Save and Load system, where you can save any grid and load it from a file.
+The "Pattern" menu contains the tool that allows you to load patterns from a file, or to create and save your own patterns from the grid.
+The "Colour" menu contains some colour settings for the grid, with the ability to pick your own colours by selecting "Custom"."""
+
+tutorialPage4T = Text(tutorialPage4Box,
+                      text=page4T,
+                      width=250)
+
+tutorialPages = [tutorialPage1Box, tutorialPage2Box, tutorialPage3Box, tutorialPage4Box]
 
 if test:
     testGrid = grid.GenerateGrid(10,10)
